@@ -141,4 +141,24 @@ client.on("interactionCreate", async (interaction) => {
             searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0]);
             if (!queue.playing) await queue.play();
     }
+
+    if(interaction.commandName === "skip"){
+        await interaction.deferReply();
+        const queue = player.getQueue(interaction.guildId);
+        if(!queue || !queue.playing)
+            return void interaction.followUp({ content: "❌ | No music is being played!" })
+        const currentTrack = queue.current;
+        const success = queue.skip();
+        return void interaction.followUp({
+            content: success ? `✅ | Skipped **${currentTrack}**!` : "❌ | Something went wrong!"
+        });
+    }
+    
+    else if (interaction.commandName === "stop") {
+        await interaction.deferReply();
+        const queue = player.getQueue(interaction.guildId);
+        if (!queue || !queue.playing) return void interaction.followUp({ content: "❌ | No music is being played!" });
+        queue.destroy();
+        return void interaction.followUp({ content: "🛑 | Stopped the player!" });
+    }
 });
