@@ -1,8 +1,11 @@
-const { Client, GuildMember, GatewayIntentBits } = require("discord.js");
+const { Client, GuildMember, GatewayIntentBits, Collection } = require("discord.js");
 const { Player, QueryType } = require("discord-player");
-const config = require("./config/config.json");
+const config = require("dotenv").config();
+const {REST} = require("@discordjs/rest");
+const { Routes } = require("discord-api-types/v10");
 
-const player = new Player(client);
+const fs = require("node:fs");
+const path = require("node:path");
 
 const client = new Client({
     intents: [
@@ -11,6 +14,8 @@ const client = new Client({
         GatewayIntentBits.Guilds
     ]
 });
+
+const player = new Player(client);
 
 // logs bot into discord with the bot token as an argument
 client.login(config.token); 
@@ -110,37 +115,6 @@ client.on("interactionCreate", async (interaction) => {
     if (interaction.guild.me.voice.channelId && interaction.member.voice.channelId !== interaction.guild.me.voice.channelId) {
         return void interaction.reply({ content: "You are not in my voice channel!", ephemeral: true });
     }
-    // if commant is play then handle command
-    if (interaction.commandName === "play") {
-        await interaction.deferReply();
-        // gets the value of "query"
-        const query = interaction.options.get("query").value;
-        const searchResult = await Player
-            .search(query, {
-                requestedBy: interaction.user,
-                searchEngine: QueryType.AUTO
-            })
-            // error handler for no results
-            .catch(() => {});
-            if(!searchResult || !searchResult.tracks.length) 
-                return void interaction.followUp({ content: "No results were found!" })
-            
-            // queue creation
-            const queue = await player.createQueue(interaction.guild, {
-            metadata: interaction.channel // will contain inforamtion about the channel (queue info)
-            });
-        
-            try {
-                if (!queue.connection) await queue.connect(interaction.member.voice.channel);
-            } catch {
-                void player.deleteQueue(interaction.guildId);
-                return void interaction.followUp({ content: "Could not join your voice channel!" });
-            }
-        
-            await interaction.followUp({ content: `⏱ | Loading your ${searchResult.playlist ? "playlist" : "track"}...` });
-            searchResult.playlist ? queue.addTracks(searchResult.tracks) : queue.addTrack(searchResult.tracks[0]);
-            if (!queue.playing) await queue.play();
-    }
 
     if(interaction.commandName === "skip"){
         await interaction.deferReply();
@@ -153,7 +127,7 @@ client.on("interactionCreate", async (interaction) => {
             content: success ? `✅ | Skipped **${currentTrack}**!` : "❌ | Something went wrong!"
         });
     }
-    
+
     else if (interaction.commandName === "stop") {
         await interaction.deferReply();
         const queue = player.getQueue(interaction.guildId);
