@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const fs = require("node:fs");
 const path = require("node:path");
 
+
 dotenv.config();
 
 const client = new Client({
@@ -16,6 +17,7 @@ const client = new Client({
 
 const player = new Player(client);
 client.commands = new Collection();
+player.extractors.loadDefault();
 
 // Load commands dynamically
 const commandFolders = fs.readdirSync(path.join(__dirname, 'commands'));
@@ -76,6 +78,7 @@ client.on("messageCreate", async (message) => {
             options: cmd.options || []
         })));
         await message.reply("Deployed!");
+        return;
     }
         // Handle message commands
         const prefix = "!";
@@ -98,10 +101,16 @@ client.on("messageCreate", async (message) => {
 
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand() || !interaction.guildId) return;
-    if (!(interaction.member instanceof GuildMember) || !interaction.member.voice.channel) {
+
+    const botMember = interaction.guild.me;
+    const userVoiceChannel = interaction.member.voice.channelId;
+    const botVoiceChannel = botMember ? botMember.voice.channelId : null;
+
+    if (!(interaction.member instanceof GuildMember) || !userVoiceChannel) {
         return void interaction.reply({ content: "You are not in a voice channel!", ephemeral: true });
     }
-    if (interaction.guild.me.voice.channelId && interaction.member.voice.channelId !== interaction.guild.me.voice.channelId) {
+    
+    if (botVoiceChannel && userVoiceChannel !== botVoiceChannel) {
         return void interaction.reply({ content: "You are not in my voice channel!", ephemeral: true });
     }
 
